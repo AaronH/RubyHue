@@ -92,7 +92,7 @@ module Hue
     end
 
     def blinking?
-      self['alert'] =~ /l?select/
+      !!(self['alert'] =~ /l?select/)
     end
 
     def blink(start = true)
