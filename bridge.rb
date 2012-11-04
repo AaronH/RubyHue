@@ -35,6 +35,9 @@ module Hue
     def display(response = nil)
       if response and response.code.to_s != '200'
         puts "Response #{response.code} #{response.message}: #{JSON.parse(response.body).first}"
+        false
+      else
+        true
       end
     end
 
