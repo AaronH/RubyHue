@@ -2,11 +2,11 @@ module Hue
 
   class Bulb
 
-    attr_accessor :id, :hub, :stash
+    attr_accessor :id, :stash, :options
 
-    def initialize(light_num)
-      self.id   = light_num
-      self.hub  = Bridge.new light_num
+    def initialize(light_num, options = {})
+      self.id       = light_num
+      self.options  = options
     end
 
     def status
@@ -22,7 +22,8 @@ module Hue
     end
 
     def update(settings = {})
-      hub.update_state settings
+      puts @options.merge(settings).inspect
+      Bridge.update Bridge.uri('lights', id, 'state'), @options.merge(settings)
     end
 
     def name
@@ -30,7 +31,7 @@ module Hue
     end
 
     def name=(_name)
-      hub.update_base name: _name
+      Bridge.update uri('lights', light_id), name: _name
     end
 
     def on?
@@ -65,6 +66,7 @@ module Hue
     end
 
     def hue=(_hue)
+      _hue = (_hue * (65536.0 / 360)).to_i
       update hue: _hue
       hue
     end
@@ -76,6 +78,16 @@ module Hue
     def sat=(_sat)
       update sat: _sat
       sat
+    end
+
+    def transition_time
+      # transition time in seconds
+      (options[:transitiontime] || 1).to_f / 10
+    end
+
+    def transition_time=(time)
+      # transition time in seconds
+      self.options[:transitiontime] = (time * 10).to_i
     end
 
     def colortemp
@@ -110,15 +122,16 @@ module Hue
 
     def settings
       state = states
-      case state['colormode']
-      when 'ct'
-        {'ct' => state['ct']}
-      when 'xy'
-        {'xy' => state['xy']}
-      when 'hs'
-        {'hue' => state['hue'], 'sat' => state['sat']}
-      end.merge('on' => state['on'], 'bri' => state['bri'])
+      options.merge case state['colormode']
+                    when 'ct'
+                      {'ct' => state['ct']}
+                    when 'xy'
+                      {'xy' => state['xy']}
+                    when 'hs'
+                      {'hue' => state['hue'], 'sat' => state['sat']}
+                    end.merge('on' => state['on'], 'bri' => state['bri'])
     end
+    alias :color :settings
 
     def stash!
       self.stash ||= settings
@@ -144,10 +157,10 @@ module Hue
         hue = ((rand * 5460) + 5460).to_i
         sat = rand(64) + 170
         bri = rand(32) + 16
-        update hue: hue, sat: sat, bri: bri
 
-        # delay = (rand * 0.5) + (@delay ||= 0)
-        # sleep delay
+        delay = (rand * 0.5) + (@delay ||= 0)
+        update(hue: hue, sat: sat, bri: bri, transitiontime: (delay * 10).to_i)
+        sleep delay
       end
       restore!
     end
