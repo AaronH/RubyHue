@@ -93,11 +93,13 @@ module Hue
     def colortemp
       self[:ct]
     end
+    alias :ct :colortemp
 
     def colortemp=(_ct)
       update ct: _ct
       colortemp
     end
+    alias :ct= :colortemp=
 
     def colormode
       self[:colormode]
@@ -131,7 +133,118 @@ module Hue
                       {'hue' => state['hue'], 'sat' => state['sat']}
                     end.merge('on' => state['on'], 'bri' => state['bri'])
     end
-    alias :color :settings
+
+    def rgb
+      send %(#{colormode}_to_rgb)
+    end
+
+    def kelvin
+      # convert colortemp setting to Kelvin
+      1000000 / self['ct']
+    end
+
+    def ct_to_rgb
+      # using method described at
+      # http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
+      temp = kelvin / 100
+
+      red = temp <= 66 ? 255 : 329.698727446 * ((temp - 60) ** -0.1332047592)
+
+      green = if temp <= 66
+                99.4708025861 * Math.log(temp) - 161.1195681661
+              else
+                288.1221695283 * ((temp - 60) ** -0.0755148492)
+              end
+
+      blue = if temp >= 66
+                255
+              elsif temp <= 19
+                0
+              else
+                138.5177312231 * Math.log(temp - 10) - 305.0447927307
+              end
+
+      {   red: [[red,   0].max, 255].min.to_i,
+        green: [[green, 0].max, 255].min.to_i,
+         blue: [[blue,  0].max, 255].min.to_i
+      }
+
+    end
+
+    def xy_to_rgb
+      # still need to investigate this
+    end
+
+    def hue_in_degrees
+      self['hue'].to_f / (65536.0 / 360)
+    end
+
+    def hue_as_decimal
+      hue_in_degrees / 360
+    end
+
+    def sat_as_decimal
+      self['sat'] / 255.0
+    end
+
+    def hs_to_rgb
+      h, s, v = hue_as_decimal, sat_as_decimal, 1.0
+      if s == 0 #monochromatic
+        red = green = blue = 255
+      else
+        i = (h * 6).floor
+        f = h * 6 - i
+        p = v * (1 - s)
+        q = v * (1 - f * s)
+        t = v * (1 - (1 - f) * s)
+
+        case i % 6
+        when 0
+          red, green, blue = v, t, p
+        when 1
+          red, green, blue = q, v, p
+        when 2
+          red, green, blue = p, v, t
+        when 3
+          red, green, blue = p, q, v
+        when 4
+          red, green, blue = t, p, v
+        when 5
+          red, green, blue = v, p, q
+        end
+      end
+
+      {   red: [[red * 255,   0].max, 255].min.to_i,
+        green: [[green * 255, 0].max, 255].min.to_i,
+         blue: [[blue * 255,  0].max, 255].min.to_i
+      }
+    end
+
+    def rgb=(colors)
+      red, green, blue = colors[0] / 255.0, colors[1] / 255.0, colors[2] / 255.0
+
+      max = [red, green, blue].max
+      min = [red, green, blue].min
+      h, s, v = 0, 0, 1.0
+
+      d = max - min
+      s = max == 0 ? 0 : (d / max * 255)
+
+      h = case max
+          when min
+            0 # monochromatic
+          when red
+            (green - blue) / d + (green < blue ? 6 : 0)
+          when green
+            (blue - red) / d + 2
+          when blue
+            (red - green) / d + 4
+          end * 60  # / 6 * 360
+
+      h = (h * (65536.0 / 360)).to_i
+      update hue: h, sat: s.to_i
+      [h, s, 1.0]
+    end
 
     def stash!
       self.stash ||= settings
