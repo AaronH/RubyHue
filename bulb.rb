@@ -211,11 +211,17 @@ module Hue
       self['sat'] / 255.0
     end
 
+    def brightness_as_decimal
+      brightness / 255.0
+    end
+
     def hs_to_rgb
-      h, s, v = hue_as_decimal, sat_as_decimal, 1.0
+      h, s, v = hue_as_decimal, sat_as_decimal, brightness_as_decimal
       if s == 0 #monochromatic
-        red = green = blue = 255
+        red = green = blue = v
       else
+
+        v = 1.0 # We are setting the value to 1. Don't count brightness here
         i = (h * 6).floor
         f = h * 6 - i
         p = v * (1 - s)
@@ -249,7 +255,7 @@ module Hue
 
       max = [red, green, blue].max
       min = [red, green, blue].min
-      h, s, v = 0, 0, 1.0
+      h, s, l = 0, 0, ((max + min) / 2 * 255)
 
       d = max - min
       s = max == 0 ? 0 : (d / max * 255)
@@ -266,7 +272,7 @@ module Hue
           end * 60  # / 6 * 360
 
       h = (h * (65536.0 / 360)).to_i
-      update hue: h, sat: s.to_i
+      update hue: h, sat: s.to_i#, bri: l.to_i
       [h, s, 1.0]
     end
 
