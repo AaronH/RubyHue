@@ -138,6 +138,30 @@ module Hue
       send %(#{colormode}_to_rgb)
     end
 
+    def red
+      rgb[:red]
+    end
+
+    def green
+      rgb[:green]
+    end
+
+    def blue
+      rgb[:blue]
+    end
+
+    def red=(_red)
+      self.rgb = [_red, green, blue]
+    end
+
+    def green=(_green)
+      self.rgb = [red, _green, blue]
+    end
+
+    def blue=(_blue)
+      self.rgb = [red, green, _blue]
+    end
+
     def kelvin
       # convert colortemp setting to Kelvin
       1000000 / self['ct']
