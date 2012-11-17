@@ -195,8 +195,17 @@ module Hue
 
     end
 
+    def xyz
+      vals = states['xy']
+      vals + [1 - vals.first - vals.last]
+    end
+
     def xy_to_rgb
-      # still need to investigate this
+      values = (RGB_MATRIX * Matrix[xyz].transpose).to_a.flatten.map{|x| [[x * 255, 0].max, 255].min.to_i}
+      {   red: values[0],
+        green: values[1],
+         blue: values[2]
+      }
     end
 
     def hue_in_degrees
