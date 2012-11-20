@@ -310,11 +310,11 @@ module Hue
       on if off?
 
       repeat.times do
-        hue = ((rand * 5460) + 5460).to_i
+        hue = ((rand * 3460) + 5460).to_i
         sat = rand(64) + 170
         bri = rand(32) + 16
 
-        delay = (rand * 0.5) + (@delay ||= 0)
+        delay = (rand * 0.35) + (@delay ||= 0)
         update(hue: hue, sat: sat, bri: bri, transitiontime: (delay * 10).to_i)
         sleep delay
       end
