@@ -1,5 +1,5 @@
-BASE    = 'http://IP_ADDRESS_OF_YOUR_BRIDGE/api'
-UUID    = 'UNIQUE_IDENTIFIER'
+BASE = 'http://192.168.0.5/api' unless defined?(BASE)
+UUID = Digest::MD5::hexdigest('ruby-hue') unless defined?(UUID)
 
 require 'net/http'
 require 'json'
