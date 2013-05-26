@@ -59,12 +59,16 @@ module Hue
       ids.each{|x| remove_schedule x}
     end
 
-    def display(response = nil)
+    def display(response = nil, options = {})
       if response and response.code.to_s != '200'
         puts "Response #{response.code} #{response.message}: #{JSON.parse(response.body).first}"
         false
       else
-        true
+        if options[:parse]
+          JSON.parse(response.body)
+        else
+          true
+        end
       end
     end
 
@@ -76,15 +80,45 @@ module Hue
       update uri('lights', light_id), settings if light_id
     end
 
-    def update(url, settings = {})
+    def update(*args)
+      settings = args.pop
+      url = parse_uri(*args)
       request = Net::HTTP::Put.new(url.request_uri, initheader = {'Content-Type' =>'application/json'})
       request.body = settings.to_json
       display Net::HTTP.new(url.host, url.port).start {|http| http.request(request) }
     end
+    alias :put :update
 
-    def delete(url)
+    def delete(*args)
+      url = parse_uri(*args)
       request = Net::HTTP::Delete.new(url.request_uri, initheader = {'Content-Type' =>'application/json'})
       display Net::HTTP.new(url.host, url.port).start{|http| http.request(request)}
+    end
+
+    def get(*args)
+      url = parse_uri(*args)
+      request = Net::HTTP::Get.new(url.request_uri, initheader = {'Content-Type' =>'application/json'})
+      display Net::HTTP.new(url.host, url.port).start{|http| http.request(request)}, parse: true
+    end
+
+    def post(*args)
+      settings = args.pop
+      url = parse_uri(*args)
+      request = Net::HTTP::Post.new(url.request_uri, initheader = {'Content-Type' =>'application/json'})
+      request.body = settings.to_json
+      display Net::HTTP.new(url.host, url.port).start {|http| http.request(request) }
+    end
+
+    def parse_uri(*args)
+      [*args].first.is_a?(URI) ? [*args].first : uri(args)
+    end
+
+    def groups
+      get :groups
+    end
+
+    def group(_id)
+      get :groups, _id
     end
 
   end
